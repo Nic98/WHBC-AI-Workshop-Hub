@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sound Shape Studio</title>
+  <style>
+    :root{color-scheme:light;--ink:#111;--paper:#fbfaf7;--pink:#f2c9dc;--coral:#ff8a72;--blue:#a9ddf5;--lime:#ddf27a}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#151515;color:var(--paper);font-family:Inter,system-ui,sans-serif}button,input{font:inherit}
+    .app{min-height:100vh;display:grid;grid-template-columns:350px 1fr;overflow:hidden}.panel{position:relative;z-index:2;padding:32px;background:var(--paper);color:var(--ink);border-right:2px solid var(--ink);display:flex;flex-direction:column;gap:26px}
+    .kicker,.label,.mode-label{font:700 11px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase}h1{margin:8px 0 0;font-size:clamp(45px,5vw,70px);line-height:.91;letter-spacing:-.055em}.intro{margin:14px 0 0;color:#55534e;line-height:1.55}
+    .modes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.mode{padding:10px 5px;border:1.5px solid #111;border-radius:10px;background:#fff;font-size:12px;font-weight:700;cursor:pointer}.mode[aria-pressed=true]{background:var(--pink);box-shadow:3px 3px 0 #111;transform:translate(-1px,-1px)}
+    .controls{display:grid;gap:18px}.control-head{display:flex;justify-content:space-between;margin-bottom:8px}output{font:700 12px ui-monospace,monospace}input[type=range]{width:100%;accent-color:#111}
+    .play{border:2px solid #111;border-radius:999px;background:#111;color:#fff;padding:14px 18px;font-weight:750;cursor:pointer}.play:hover,.play:focus-visible{outline:0;background:var(--coral);color:#111;box-shadow:4px 4px 0 var(--blue);transform:translate(-2px,-2px)}
+    .note{margin:auto 0 0;border-top:1px dashed #777;padding-top:15px;font-size:12px;line-height:1.5;color:#66635d}
+    .stage{position:relative;min-width:0;overflow:hidden;background:radial-gradient(circle at 50% 45%,#313131 0,#171717 58%,#0e0e0e 100%)}canvas{position:absolute;inset:0;width:100%;height:100%}
+    .stage-top{position:absolute;z-index:2;top:26px;left:28px;right:28px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}.live{display:flex;gap:9px;align-items:center}.live i{width:10px;height:10px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 6px rgba(255,138,114,.14);animation:pulse 1.2s ease infinite}.stage-title{font:700 11px ui-monospace,monospace;letter-spacing:.11em}.clock{font:700 14px ui-monospace,monospace}
+    .legend{position:absolute;z-index:2;right:27px;bottom:25px;display:flex;gap:8px}.legend span{padding:7px 10px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(0,0,0,.25);backdrop-filter:blur(8px);font:600 10px ui-monospace,monospace;letter-spacing:.07em}
+    @keyframes pulse{50%{transform:scale(.62);opacity:.55}}@media(max-width:760px){.app{grid-template-columns:1fr}.panel{border-right:0;border-bottom:2px solid #111;padding:22px}.stage{min-height:560px}.note{display:none}}@media(prefers-reduced-motion:reduce){.live i{animation:none}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="panel"><header><span class="kicker">AI WORKSHOP HUB · DEMO</span><h1>Sound Shape Studio</h1><p class="intro">Turn rhythm settings into a living visual composition—and hear a short pattern built from the same rules.</p></header>
+      <div><span class="label">Visual language</span><div class="modes" style="margin-top:10px"><button class="mode" data-mode="orbits" aria-pressed="true">Orbits</button><button class="mode" data-mode="waves" aria-pressed="false">Waves</button><button class="mode" data-mode="grid" aria-pressed="false">Grid</button></div></div>
+      <div class="controls"><label><span class="control-head"><span class="label">Tempo</span><output id="tempoOut">92 BPM</output></span><input id="tempo" type="range" min="55" max="150" value="92" /></label><label><span class="control-head"><span class="label">Energy</span><output id="energyOut">68%</output></span><input id="energy" type="range" min="10" max="100" value="68" /></label><label><span class="control-head"><span class="label">Complexity</span><output id="complexityOut">5 layers</output></span><input id="complexity" type="range" min="2" max="9" value="5" /></label></div>
+      <button id="play" class="play">Play generated pattern ▶</button><p class="note">Sound begins only after you press play. The pattern is generated locally in your browser and records no information.</p>
+    </aside>
+    <section class="stage" aria-label="Animated generative composition"><canvas id="canvas"></canvas><div class="stage-top"><div class="live"><i></i><span class="stage-title">GENERATIVE COMPOSITION · LIVE</span></div><span id="clock" class="clock">BAR 01 / 08</span></div><div class="legend"><span>RHYTHM → SCALE</span><span>ENERGY → COLOR</span></div></section>
+  </main>
+  <script>
+    const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),tempo=document.getElementById('tempo'),energy=document.getElementById('energy'),complexity=document.getElementById('complexity'),tempoOut=document.getElementById('tempoOut'),energyOut=document.getElementById('energyOut'),complexityOut=document.getElementById('complexityOut'),clock=document.getElementById('clock'),play=document.getElementById('play');let mode='orbits',playing=false,audioContext,timer,bar=1;const palette=['#f2c9dc','#ff8a72','#a9ddf5','#ddf27a','#c8b6ff'];
+    function resize(){const d=Math.min(devicePixelRatio,2);canvas.width=canvas.clientWidth*d;canvas.height=canvas.clientHeight*d;ctx.setTransform(d,0,0,d,0,0)}addEventListener('resize',resize);resize();
+    function values(){return{tempo:+tempo.value,energy:+energy.value,layers:+complexity.value}}
+    function draw(t){const w=canvas.clientWidth,h=canvas.clientHeight,{tempo:tp,energy:e,layers}=values(),time=t/1000*tp/92;ctx.clearRect(0,0,w,h);ctx.globalCompositeOperation='screen';
+      if(mode==='orbits'){for(let i=0;i<layers;i++){const r=58+i*Math.min(w,h)/(layers*3.2),x=w/2+Math.cos(time*(.22+i*.025)+i)*r*.18,y=h/2+Math.sin(time*(.18+i*.03)+i)*r*.12;ctx.strokeStyle=palette[i%palette.length];ctx.lineWidth=1.5+e/42;ctx.globalAlpha=.34+i/layers*.38;ctx.beginPath();ctx.ellipse(w/2,h/2,r,r*(.55+i*.025),i*.32+time*.03,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=.85;ctx.fillStyle=palette[(i+1)%palette.length];ctx.beginPath();ctx.arc(x+Math.cos(time+i)*r,y+Math.sin(time*.8+i)*r*.55,5+e/18,0,Math.PI*2);ctx.fill()}}
+      if(mode==='waves'){for(let i=0;i<layers;i++){ctx.strokeStyle=palette[i%palette.length];ctx.lineWidth=2+e/35;ctx.globalAlpha=.65;ctx.beginPath();for(let x=0;x<=w;x+=8){const y=h/2+(i-(layers-1)/2)*35+Math.sin(x/55+time*(1+i*.08)+i)*((18+e/2)/(i*.3+1));x?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke()}}
+      if(mode==='grid'){const gap=Math.max(42,92-layers*5);for(let y=gap;y<h;y+=gap)for(let x=gap;x<w;x+=gap){const pulse=(Math.sin(time*2+x*.015+y*.012)+1)/2,size=4+pulse*(8+e/8);ctx.globalAlpha=.35+pulse*.55;ctx.fillStyle=palette[Math.floor((x+y)/gap)%palette.length];ctx.save();ctx.translate(x,y);ctx.rotate(time*.18+(x+y)*.001);ctx.fillRect(-size,-size,size*2,size*2);ctx.restore()}}
+      requestAnimationFrame(draw)}requestAnimationFrame(draw);
+    [tempo,energy,complexity].forEach(input=>input.addEventListener('input',()=>{tempoOut.value=tempo.value+' BPM';energyOut.value=energy.value+'%';complexityOut.value=complexity.value+' layers'}));
+    document.querySelectorAll('.mode').forEach(btn=>btn.addEventListener('click',()=>{mode=btn.dataset.mode;document.querySelectorAll('.mode').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)))}));
+    function tone(freq,when,duration){const o=audioContext.createOscillator(),g=audioContext.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(.0001,when);g.gain.exponentialRampToValueAtTime(.08+energy.value/1800,when+.02);g.gain.exponentialRampToValueAtTime(.0001,when+duration);o.connect(g).connect(audioContext.destination);o.start(when);o.stop(when+duration+.03)}
+    function schedule(){const beat=60/tempo.value,notes=[220,277.18,329.63,440,554.37];for(let i=0;i<complexity.value;i++)tone(notes[(i+bar)%notes.length],audioContext.currentTime+i*beat/2,beat*.38);clock.textContent=`BAR ${String(bar).padStart(2,'0')} / 08`;bar=bar%8+1;timer=setTimeout(schedule,beat*complexity.value*500)}
+    play.addEventListener('click',async()=>{if(!audioContext)audioContext=new AudioContext();if(audioContext.state==='suspended')await audioContext.resume();playing=!playing;play.textContent=playing?'Stop pattern ■':'Play generated pattern ▶';if(playing){bar=1;schedule()}else clearTimeout(timer)});
+  </script>
+</body>
+</html>

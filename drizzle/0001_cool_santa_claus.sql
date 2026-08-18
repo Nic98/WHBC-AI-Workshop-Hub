@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `categories_json` text DEFAULT '[]' NOT NULL;

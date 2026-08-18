@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Story Seed Lab</title>
+  <style>
+    :root{color-scheme:light;--paper:#fbfaf7;--ink:#111;--violet:#c8b6ff;--yellow:#f8e7a2;--coral:#ff8a72;--blue:#a9ddf5}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif}button,select{font:inherit}
+    body:before{content:"";position:fixed;inset:0;background-image:radial-gradient(rgba(17,17,17,.12) 1px,transparent 1px);background-size:24px 24px;mask-image:linear-gradient(90deg,#000,transparent 78%);pointer-events:none}
+    .shell{position:relative;min-height:100vh;max-width:1440px;margin:auto;padding:34px;display:grid;grid-template-rows:auto 1fr;gap:28px}
+    header{display:flex;justify-content:space-between;align-items:flex-start;gap:30px}.kicker,.label,.step{font:700 11px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase}
+    h1{margin:7px 0 0;font-size:clamp(48px,7vw,96px);line-height:.9;letter-spacing:-.055em}.intro{max-width:390px;margin:4px 0 0;line-height:1.6;color:#55534d}
+    .workspace{display:grid;grid-template-columns:minmax(280px,410px) minmax(0,1fr);min-height:570px;border:2px solid #111;border-radius:30px;overflow:hidden;box-shadow:9px 10px 0 rgba(17,17,17,.12)}
+    .prompt-panel{padding:30px;background:var(--violet);border-right:2px solid #111;display:flex;flex-direction:column;gap:25px}
+    .prompt-panel h2{margin:0;max-width:11ch;font-size:34px;line-height:1;letter-spacing:-.035em}.fields{display:grid;gap:16px}
+    label{display:grid;gap:8px}select{width:100%;appearance:none;border:1.5px solid #111;border-radius:12px;background:#fff;padding:13px 42px 13px 14px;background-image:linear-gradient(45deg,transparent 50%,#111 50%),linear-gradient(135deg,#111 50%,transparent 50%);background-position:calc(100% - 18px) 19px,calc(100% - 12px) 19px;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
+    .generate{margin-top:2px;border:2px solid #111;border-radius:999px;padding:14px 18px;background:#111;color:#fff;font-weight:750;cursor:pointer}.generate:hover,.generate:focus-visible{outline:0;background:var(--coral);color:#111;box-shadow:4px 4px 0 #fff;transform:translate(-2px,-2px)}
+    .micro{margin:auto 0 0;border-top:1px dashed rgba(17,17,17,.55);padding-top:17px;font-size:12px;line-height:1.5;color:#39373f}
+    .story-panel{position:relative;overflow:hidden;padding:clamp(30px,5vw,70px);background:#fff;display:flex;flex-direction:column;justify-content:center}
+    .blob{position:absolute;border:2px solid #111;border-radius:48% 52% 42% 58% / 58% 42% 58% 42%;opacity:.82}.blob.one{width:260px;height:220px;right:-80px;top:-55px;background:var(--yellow);rotate:12deg}.blob.two{width:180px;height:150px;left:-65px;bottom:-55px;background:var(--blue);rotate:-18deg}
+    .paper{position:relative;z-index:1;max-width:760px}.step{display:inline-block;padding:7px 10px;border:1px solid #111;border-radius:999px;background:var(--yellow)}
+    #title{min-height:2em;margin:22px 0 18px;font-family:Georgia,serif;font-size:clamp(42px,6vw,82px);font-weight:500;line-height:.96;letter-spacing:-.05em}
+    #opening{max-width:640px;margin:0;font-family:Georgia,serif;font-size:clamp(19px,2.2vw,27px);line-height:1.55;color:#33312f}
+    .beats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:34px}.beat{min-height:105px;padding:14px;border:1.5px solid #111;border-radius:14px;background:var(--paper)}.beat b{display:block;margin-bottom:9px;font:700 10px ui-monospace,monospace;letter-spacing:.08em}.beat span{font-size:13px;line-height:1.4}
+    .spark{position:absolute;right:8%;bottom:10%;width:64px;height:64px;opacity:.65}.spark:before,.spark:after{content:"";position:absolute;left:31px;top:0;width:2px;height:64px;background:#111}.spark:after{rotate:90deg}.spark i:before,.spark i:after{content:"";position:absolute;left:31px;top:8px;width:2px;height:48px;background:#111;rotate:45deg}.spark i:after{rotate:-45deg}
+    .changing{animation:lift .45s ease both}@keyframes lift{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    @media(max-width:800px){.shell{padding:22px}header{display:block}.intro{margin-top:18px}.workspace{grid-template-columns:1fr}.prompt-panel{border-right:0;border-bottom:2px solid #111}.story-panel{min-height:520px}.beats{grid-template-columns:1fr}.beat{min-height:auto}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header><div><span class="kicker">AI WORKSHOP HUB · DEMO</span><h1>Story Seed Lab</h1></div><p class="intro">Mix three creative ingredients, then let the lab propose a title, an opening, and a simple story path.</p></header>
+    <main class="workspace">
+      <section class="prompt-panel" aria-label="Story controls"><h2>Build your prompt.</h2><div class="fields">
+        <label><span class="label">Character</span><select id="character"><option value="inventor">A young inventor</option><option value="robot">A curious robot</option><option value="gardener">A rooftop gardener</option><option value="archivist">A time-travelling archivist</option></select></label>
+        <label><span class="label">Setting</span><select id="setting"><option value="station">an abandoned sky station</option><option value="forest">a forest that remembers</option><option value="market">a floating night market</option><option value="library">a library under the sea</option></select></label>
+        <label><span class="label">Mood</span><select id="mood"><option value="hopeful">Hopeful</option><option value="mysterious">Mysterious</option><option value="playful">Playful</option><option value="urgent">Urgent</option></select></label>
+      </div><button class="generate" id="generate">Generate a story seed ↗</button><p class="micro">This demo combines authored language fragments locally. It shows prompt-driven interaction without sending information to an online AI service.</p></section>
+      <section class="story-panel" aria-live="polite"><div class="blob one"></div><div class="blob two"></div><div class="paper" id="paper"><span class="step">SEED 01 · READY TO GROW</span><h2 id="title">The Station That Woke at Dawn</h2><p id="opening">Mina had repaired a hundred broken machines, but none had ever whispered her name. Above the sleeping city, one forgotten station was waiting for exactly the question she carried.</p><div class="beats"><div class="beat"><b>01 · DISCOVER</b><span id="beat1">A hidden message changes the character's plan.</span></div><div class="beat"><b>02 · CHOOSE</b><span id="beat2">Two possible paths test what matters most.</span></div><div class="beat"><b>03 · TRANSFORM</b><span id="beat3">The setting reveals a surprising new purpose.</span></div></div></div><div class="spark" aria-hidden="true"><i></i></div></section>
+    </main>
+  </div>
+  <script>
+    const data={
+      character:{inventor:{name:'Mina',role:'young inventor',gift:'a pocket full of unfinished machines'},robot:{name:'Unit Seven',role:'curious robot',gift:'a question its makers forgot to answer'},gardener:{name:'Noah',role:'rooftop gardener',gift:'a seed that glowed after rain'},archivist:{name:'Iris',role:'time-travelling archivist',gift:'a map drawn in tomorrow’s ink'}},
+      setting:{station:{place:'the abandoned sky station',title:'The Abandoned Sky Station',image:'above the sleeping city',secret:'the station has been waiting for a new purpose'},forest:{place:'the forest that remembers',title:'The Forest That Remembers',image:'beneath leaves filled with borrowed memories',secret:'the trees can return one forgotten moment'},market:{place:'the floating night market',title:'The Floating Night Market',image:'between lanterns drifting over the river',secret:'one stall trades in impossible directions'},library:{place:'the library under the sea',title:'The Library Under the Sea',image:'below the slow blue light',secret:'a blank book is writing the visitor’s next choice'}},
+      mood:{hopeful:{word:'Dawn',tone:'gentle',change:'opens a way forward'},mysterious:{word:'Whisper',tone:'unfamiliar',change:'raises a question no one can ignore'},playful:{word:'Upside Down',tone:'delighted',change:'turns the rules into a game'},urgent:{word:'Last Signal',tone:'electric',change:'starts a countdown'}}
+    };
+    const character=document.getElementById('character'),setting=document.getElementById('setting'),mood=document.getElementById('mood'),paper=document.getElementById('paper'),title=document.getElementById('title'),opening=document.getElementById('opening'),beat1=document.getElementById('beat1'),beat2=document.getElementById('beat2'),beat3=document.getElementById('beat3');
+    let count=1;
+    function buildStory(){const c=data.character[character.value],s=data.setting[setting.value],m=data.mood[mood.value];count++;paper.classList.remove('changing');void paper.offsetWidth;paper.classList.add('changing');document.querySelector('.step').textContent=`SEED ${String(count).padStart(2,'0')} · READY TO GROW`;title.textContent=`${m.word} at ${s.title}`;opening.textContent=`${c.name}, a ${c.role}, arrived ${s.image} carrying ${c.gift}. A ${m.tone} message ${m.change}, and suddenly ${s.secret}.`;beat1.textContent=`A clue connects ${c.name} to the setting's hidden history.`;beat2.textContent=`Keeping the gift or sharing it creates two different futures.`;beat3.textContent=`The final choice gives ${s.place} a surprising new role.`}
+    document.getElementById('generate').addEventListener('click',buildStory);
+  </script>
+</body>
+</html>

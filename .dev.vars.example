@@ -1,0 +1,4 @@
+# Local administrator credentials. Generate a PBKDF2-SHA256 hash with at least
+# 210,000 iterations and keep the real values in the ignored .dev.vars file.
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD_HASH="pbkdf2-sha256$210000$BASE64_SALT$BASE64_HASH"
