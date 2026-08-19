@@ -1,5 +1,5 @@
 import { unzipSync } from "fflate";
-import { MAX_EXPANDED_BYTES, MAX_PROJECT_FILES, MAX_SINGLE_FILE_BYTES, MAX_ZIP_BYTES, normalizeProjectPath } from "./storage-validation.ts";
+import { isIgnorableArchiveMetadata, MAX_EXPANDED_BYTES, MAX_PROJECT_FILES, MAX_SINGLE_FILE_BYTES, MAX_ZIP_BYTES, normalizeProjectPath } from "./storage-validation.ts";
 
 export type PreparedProjectFile = { path: string; bytes: Uint8Array; type: string };
 
@@ -41,7 +41,7 @@ function inspectZipDirectory(bytes: Uint8Array) {
     if (flags & 1) zipError("Password-protected ZIP projects are not supported.");
     if (method !== 0 && method !== 8) zipError("This ZIP uses an unsupported compression method.");
     const name = decoder.decode(bytes.subarray(offset + 46, offset + 46 + nameLength)).replaceAll("\\", "/");
-    if (!name.endsWith("/") && !normalizeProjectPath(name)) zipError("One or more ZIP paths are unsafe or unsupported.");
+    if (!name.endsWith("/") && !isIgnorableArchiveMetadata(name) && !normalizeProjectPath(name)) zipError("One or more ZIP paths are unsafe or unsupported.");
     if (uncompressedSize > MAX_SINGLE_FILE_BYTES) zipError(`The file ${name || "inside the ZIP"} is larger than 50 MB.`);
     expandedBytes += uncompressedSize;
     if (expandedBytes > MAX_EXPANDED_BYTES) zipError("The expanded project is larger than 100 MB.");
@@ -61,7 +61,7 @@ export function prepareProjectBytes(filename: string, bytes: Uint8Array): Prepar
   let archive: Record<string, Uint8Array>;
   try { archive = unzipSync(bytes); }
   catch { throw new Error("This ZIP file could not be opened. Export it again and retry."); }
-  let entries = Object.entries(archive).filter(([path]) => !path.endsWith("/") && !path.includes("__MACOSX/") && !path.endsWith(".DS_Store"));
+  let entries = Object.entries(archive).filter(([path]) => !path.endsWith("/") && !isIgnorableArchiveMetadata(path));
   const indexCandidates = entries.map(([path]) => path.replaceAll("\\", "/")).filter((path) => path === "index.html" || path.endsWith("/index.html")).sort((a, b) => a.length - b.length);
   if (!indexCandidates.length) throw new Error("No index.html file was found in this ZIP project.");
   const root = indexCandidates[0].slice(0, -"index.html".length);

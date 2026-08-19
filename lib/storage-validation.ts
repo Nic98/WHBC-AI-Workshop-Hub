@@ -8,6 +8,13 @@ const blockedExtensions = new Set(["exe", "dll", "dmg", "app", "sh", "bash", "ba
 
 export type ManifestFile = { path: string; size: number; type?: string };
 
+export function isIgnorableArchiveMetadata(input: string) {
+  const normalized = input.replaceAll("\\", "/");
+  const segments = normalized.split("/").filter(Boolean);
+  const basename = segments.at(-1) ?? "";
+  return segments.includes("__MACOSX") || basename === ".DS_Store" || basename.startsWith("._");
+}
+
 export function normalizeProjectPath(input: string) {
   const normalized = input.replaceAll("\\", "/").replace(/^\.\//, "");
   const segments = normalized.split("/");

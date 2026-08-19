@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getDb } from "@/db";
 import { adminSessions, loginAttempts } from "@/db/schema";
 import { verifyPbkdf2Password } from "@/lib/password";
+import { createProjectPreviewToken, verifyProjectPreviewToken } from "@/lib/preview-token";
 
 const SESSION_COOKIE = "whbc_admin_session";
 const IDLE_SESSION_MS = 12 * 60 * 60 * 1000;
@@ -94,6 +95,18 @@ export async function isAdminRequest(request: Request) {
 export async function isAdminPageSession() {
   const jar = await cookies();
   return validateToken(jar.get(SESSION_COOKIE)?.value ?? null, true);
+}
+
+export async function issueProjectPreviewToken(projectId: string, versionId: string) {
+  const secret = secrets().ADMIN_PASSWORD_HASH;
+  if (!secret) throw new Error("Project preview is unavailable.");
+  return createProjectPreviewToken(secret, projectId, versionId);
+}
+
+export async function isProjectPreviewToken(token: string, projectId: string, versionId: string) {
+  const secret = secrets().ADMIN_PASSWORD_HASH;
+  if (!secret) return false;
+  return verifyProjectPreviewToken(secret, token, projectId, versionId);
 }
 
 export async function destroyAdminSession(request: Request) {
