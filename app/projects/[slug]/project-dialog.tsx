@@ -2,11 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
+import { ShareControls } from "./share-controls";
 
 type DialogProject = {
   id: string; slug: string; title: string; description: string; studentName: string;
   creatorType: "student" | "teacher"; creatorRole: string | null;
-  gradeLabel: string; classLabel: string; technologies: string[]; categories: string[];
+  gradeLabel: string; technologies: string[]; categories: string[];
   category: string; coverKey: string | null; coverAlt: string; sourceType: string;
   embedMode: string; externalUrl: string | null;
 };
@@ -50,7 +51,8 @@ export function ProjectDialog({ project }: { project: DialogProject }) {
       <div className="expanded-info">
         <div className="gallery-tags">{project.categories.map((category) => <span key={category}>{category.toUpperCase()}</span>)}</div>
         <h1 id="project-title">{project.title}</h1><p className="expanded-description">{project.description}</p>
-        <dl><div><dt>CREATOR</dt><dd>{project.studentName}</dd></div>{project.creatorType === "teacher" ? <div><dt>ROLE</dt><dd>{project.creatorRole}</dd></div> : <div><dt>CLASS</dt><dd>{project.gradeLabel} · {project.classLabel}</dd></div>}<div><dt>BUILT WITH</dt><dd>{project.technologies.join(" · ")}</dd></div></dl>
+        <dl><div><dt>CREATOR</dt><dd>{project.studentName}</dd></div>{project.creatorType === "teacher" ? <div><dt>SUBJECT</dt><dd>{project.creatorRole}</dd></div> : <div><dt>GRADE</dt><dd>{project.gradeLabel}</dd></div>}<div><dt>BUILT WITH</dt><dd>{project.technologies.join(" · ")}</dd></div></dl>
+        <ShareControls title={project.title} />
         <a className="primary-button expanded-action" href={launchHref} target={project.embedMode === "external" ? "_blank" : undefined} rel={project.embedMode === "external" ? "noopener noreferrer" : undefined}>体验项目 <span aria-hidden="true">↗</span></a>
       </div>
     </article>

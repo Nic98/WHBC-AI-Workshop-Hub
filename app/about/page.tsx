@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { SiteFooter } from "../site-footer";
 import { SiteHeader } from "../site-header";
 
-export const metadata: Metadata = { title: "About", description: "About AI Workshop Hub, a community for students to share, experience, and discuss AI projects." };
+export const metadata: Metadata = { title: "About", description: "About AI Workshop Hub, a teacher-led community for student AI projects and teacher-made learning tools." };
 
 const communitySteps = [
-  { number: "01", title: "NOTICE", chinese: "发现", description: "Start with something worth exploring." },
+  { number: "01", title: "IMAGINE", chinese: "想象", description: "Start with something worth exploring." },
   { number: "02", title: "BUILD", chinese: "创造", description: "Turn an idea into a working project." },
   { number: "03", title: "EXPERIENCE", chinese: "体验", description: "Open it, play with it, understand it." },
-  { number: "04", title: "CONNECT", chinese: "交流", description: "Share reactions and improve together." },
+  { number: "04", title: "SHARE", chinese: "分享", description: "Let the school community experience it." },
 ];
 
 function CommunityCards({ duplicate = false }: { duplicate?: boolean }) {
@@ -27,21 +27,21 @@ export default function AboutPage() {
       <main className="about-page">
         <section className="about-hero">
           <span className="eyebrow">ABOUT THE COMMUNITY</span>
-          <h1>Student AI Project Community</h1>
-          <p>学生 AI 项目交流社区</p>
+          <h1>Projects made across our school</h1>
+          <p>学生作品与教师 AI 工具分享社区</p>
           <div className="community-marquee" aria-label="Share ideas, try projects, start conversations, and build together">
             <div className="marquee-row marquee-row-forward"><div className="marquee-track"><span>SHARE IDEAS</span><i>·</i><span>TRY PROJECTS</span><i>·</i><span>START CONVERSATIONS</span><i>·</i><span>BUILD TOGETHER</span><i>·</i><span aria-hidden="true">SHARE IDEAS</span><i aria-hidden="true">·</i><span aria-hidden="true">TRY PROJECTS</span><i aria-hidden="true">·</i><span aria-hidden="true">START CONVERSATIONS</span><i aria-hidden="true">·</i><span aria-hidden="true">BUILD TOGETHER</span><i aria-hidden="true">·</i></div></div>
             <div className="marquee-row marquee-row-reverse" aria-hidden="true"><div className="marquee-track"><span>分享灵感</span><i>·</i><span>体验作品</span><i>·</i><span>交流想法</span><i>·</i><span>一起改进</span><i>·</i><span>分享灵感</span><i>·</i><span>体验作品</span><i>·</i><span>交流想法</span><i>·</i><span>一起改进</span><i>·</i></div></div>
           </div>
         </section>
         <section className="community-flow" aria-labelledby="community-flow-title">
-          <div className="community-flow-heading"><span className="eyebrow">HOW THE COMMUNITY MOVES</span><h2 id="community-flow-title">From an idea to a conversation.</h2><p>从一个想法，到一次真正的交流。</p></div>
+          <div className="community-flow-heading"><span className="eyebrow">HOW THE COMMUNITY MOVES</span><h2 id="community-flow-title">From an idea to something others can try.</h2><p>从一个想法，到一个大家都能体验的作品。</p></div>
           <div className="community-flow-viewport"><div className="community-flow-track"><CommunityCards /><CommunityCards duplicate /></div></div>
         </section>
         <section className="about-statement">
-          <div className="statement-copy"><span className="eyebrow">COMMUNITY MANIFESTO</span><h2>NOT JUST A GALLERY.<br />A PLACE TO SHARE, TRY, AND TALK.</h2></div>
+          <div className="statement-copy"><span className="eyebrow">TEACHER-LED SCHOOL PILOT</span><h2>STUDENT IDEAS.<br />TEACHER TOOLS.<br />SHARED WITH CARE.</h2></div>
           <div className="statement-side"><span aria-hidden="true">↗</span><p>不只是展示，<br />更是体验与交流。</p></div>
-          <div className="about-process" aria-label="Idea, build, experience, connect"><span>IDEA</span><i>→</i><span>BUILD</span><i>→</i><span>EXPERIENCE</span><i>→</i><span>CONNECT</span></div>
+          <div className="about-process" aria-label="Idea, build, review, share"><span>IDEA</span><i>→</i><span>BUILD</span><i>→</i><span>REVIEW</span><i>→</i><span>SHARE</span></div>
         </section>
       </main>
       <SiteFooter />

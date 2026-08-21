@@ -1,5 +1,5 @@
 import { unzipSync } from "fflate";
-import { isIgnorableArchiveMetadata, MAX_EXPANDED_BYTES, MAX_PROJECT_FILES, MAX_SINGLE_FILE_BYTES, MAX_ZIP_BYTES, normalizeProjectPath } from "./storage-validation.ts";
+import { isIgnorableArchiveMetadata, MAX_EXPANDED_BYTES, MAX_PROJECT_FILES, MAX_SINGLE_FILE_BYTES, MAX_ZIP_BYTES, normalizeProjectPath, unsafeProjectContentReason } from "./storage-validation.ts";
 
 export type PreparedProjectFile = { path: string; bytes: Uint8Array; type: string };
 
@@ -53,6 +53,8 @@ export function prepareProjectBytes(filename: string, bytes: Uint8Array): Prepar
   const lowerName = filename.toLowerCase();
   if (lowerName.endsWith(".html")) {
     if (!bytes.byteLength || bytes.byteLength > MAX_SINGLE_FILE_BYTES) throw new Error("HTML projects must be non-empty and no larger than 50 MB.");
+    const unsafeReason = unsafeProjectContentReason("index.html", bytes);
+    if (unsafeReason) throw new Error(unsafeReason);
     return [{ path: "index.html", bytes, type: "text/html" }];
   }
   if (!lowerName.endsWith(".zip")) throw new Error("Choose a single HTML file or a ZIP project.");
@@ -79,6 +81,8 @@ export function prepareProjectBytes(filename: string, bytes: Uint8Array): Prepar
     seen.add(path);
     totalBytes += content.byteLength;
     if (content.byteLength > MAX_SINGLE_FILE_BYTES || totalBytes > MAX_EXPANDED_BYTES) throw new Error("The expanded project is larger than the allowed limit.");
+    const unsafeReason = unsafeProjectContentReason(path, content);
+    if (unsafeReason) throw new Error(unsafeReason);
     files.push({ path, bytes: content, type: path.endsWith(".html") ? "text/html" : "" });
   }
   if (!seen.has("index.html")) throw new Error("The project must contain index.html at its top level.");

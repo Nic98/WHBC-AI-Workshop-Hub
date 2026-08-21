@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = headerList.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const socialImage = `${protocol}://${host}/og.png`;
   const title = "AI Workshop Hub";
-  const description = "A community for students to share, experience, and discuss AI projects.";
+  const description = "A teacher-led community for student AI projects and teacher-made learning tools.";
   return {
     title: { default: title, template: "%s · AI Workshop Hub" },
     description,

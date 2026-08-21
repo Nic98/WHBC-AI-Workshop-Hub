@@ -5,6 +5,9 @@ export const MAX_SINGLE_FILE_BYTES = 50 * 1024 * 1024;
 export const MAX_COVER_BYTES = 10 * 1024 * 1024;
 
 const blockedExtensions = new Set(["exe", "dll", "dmg", "app", "sh", "bash", "bat", "cmd", "ps1", "php", "py", "rb", "jar"]);
+const blockedSensitiveExtensions = new Set(["pem", "key", "p12", "pfx", "sqlite", "sqlite3"]);
+const blockedPathSegments = new Set([".git", ".svn", ".hg", "node_modules"]);
+const blockedSensitiveNames = new Set([".env", ".env.local", ".env.production", "id_rsa", "id_ed25519", "credentials.json", "service-account.json"]);
 
 export type ManifestFile = { path: string; size: number; type?: string };
 
@@ -18,14 +21,58 @@ export function isIgnorableArchiveMetadata(input: string) {
 export function normalizeProjectPath(input: string) {
   const normalized = input.replaceAll("\\", "/").replace(/^\.\//, "");
   const segments = normalized.split("/");
+  const lowerSegments = segments.map((segment) => segment.toLowerCase());
+  const basename = lowerSegments.at(-1) ?? "";
   if (
     !normalized || normalized.startsWith("/") || normalized.includes("\0") || normalized.length > 240 ||
     segments.some((segment) => !segment || segment === "." || segment === "..") ||
+    lowerSegments.some((segment) => blockedPathSegments.has(segment)) ||
+    blockedSensitiveNames.has(basename) || basename.startsWith(".env.") ||
     segments[0] === "__MACOSX" || normalized.endsWith("/.DS_Store")
   ) return null;
   const extension = normalized.includes(".") ? normalized.split(".").pop()!.toLowerCase() : "";
-  if (blockedExtensions.has(extension)) return null;
+  if (blockedExtensions.has(extension) || blockedSensitiveExtensions.has(extension)) return null;
   return normalized;
+}
+
+const secretPatterns = [
+  /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
+  /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/,
+  /\bgh[pousr]_[A-Za-z0-9]{20,}\b/,
+  /\bAKIA[0-9A-Z]{16}\b/,
+  /\bAIza[0-9A-Za-z_-]{30,}\b/,
+];
+
+export function unsafeProjectContentReason(path: string, bytes: Uint8Array) {
+  if (bytes.byteLength > 2 * 1024 * 1024) return null;
+  const extension = path.split(".").pop()?.toLowerCase() ?? "";
+  if (!["html", "htm", "js", "mjs", "css", "json", "txt", "xml", "md"].includes(extension)) return null;
+  const text = new TextDecoder().decode(bytes);
+  if (secretPatterns.some((pattern) => pattern.test(text))) {
+    return `The file ${path} appears to contain a private key or API credential. Remove secrets before submitting.`;
+  }
+  return null;
+}
+
+export type SupportedCoverType = "image/png" | "image/jpeg" | "image/webp" | "image/avif";
+
+export function detectCoverType(bytes: Uint8Array): SupportedCoverType | null {
+  if (bytes.byteLength >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return "image/png";
+  if (bytes.byteLength >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes.byteLength >= 12 && new TextDecoder().decode(bytes.subarray(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.subarray(8, 12)) === "WEBP") return "image/webp";
+  if (bytes.byteLength >= 12 && new TextDecoder().decode(bytes.subarray(4, 8)) === "ftyp") {
+    const brand = new TextDecoder().decode(bytes.subarray(8, Math.min(bytes.byteLength, 32)));
+    if (brand.includes("avif") || brand.includes("avis")) return "image/avif";
+  }
+  return null;
+}
+
+export function validateCoverBytes(bytes: Uint8Array) {
+  if (!bytes.byteLength || bytes.byteLength > MAX_COVER_BYTES) return { error: "Cover images must be between 1 byte and 10 MB." } as const;
+  const type = detectCoverType(bytes);
+  if (!type) return { error: "Choose a valid PNG, JPEG, WebP, or AVIF cover image." } as const;
+  const extension = type === "image/png" ? "png" : type === "image/jpeg" ? "jpg" : type === "image/webp" ? "webp" : "avif";
+  return { type, extension } as const;
 }
 
 export function validateManifest(input: unknown) {

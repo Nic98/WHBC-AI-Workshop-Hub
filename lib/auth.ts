@@ -109,6 +109,18 @@ export async function isProjectPreviewToken(token: string, projectId: string, ve
   return verifyProjectPreviewToken(secret, token, projectId, versionId);
 }
 
+export async function issueSubmissionPreviewToken(submissionId: string) {
+  const secret = secrets().ADMIN_PASSWORD_HASH;
+  if (!secret) throw new Error("Submission preview is unavailable.");
+  return createProjectPreviewToken(secret, "submission", submissionId);
+}
+
+export async function isSubmissionPreviewToken(token: string, submissionId: string) {
+  const secret = secrets().ADMIN_PASSWORD_HASH;
+  if (!secret) return false;
+  return verifyProjectPreviewToken(secret, token, "submission", submissionId);
+}
+
 export async function destroyAdminSession(request: Request) {
   const token = readCookie(request);
   if (token) await getDb().delete(adminSessions).where(eq(adminSessions.tokenHash, await sha256(token)));

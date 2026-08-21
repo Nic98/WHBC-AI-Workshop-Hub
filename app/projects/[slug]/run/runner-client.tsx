@@ -6,7 +6,7 @@ type RunnerProject = {
   slug: string; title: string; studentName: string; description: string; category: string; categories: string[];
   creatorType: "student" | "teacher"; creatorRole: string | null;
   sourceType: string; externalUrl: string | null; id: string; currentVersionId: string | null;
-  gradeLabel: string; classLabel: string; technologies: string[];
+  gradeLabel: string; technologies: string[];
 };
 
 export function ProjectRunner({ project }: { project: RunnerProject }) {
@@ -75,7 +75,7 @@ export function ProjectRunner({ project }: { project: RunnerProject }) {
       </main>
       <p className="sr-only" aria-live="polite">{announcement}</p>
       {fullscreenHint ? <div className="fullscreen-hint" role="status">Press Esc to exit fullscreen</div> : null}
-      {infoOpen ? <aside className="runner-info"><button aria-label="Close project information" onClick={() => setInfoOpen(false)}><span aria-hidden="true" className="close-icon" /></button><span className="project-tag">{project.categories.join(" · ").toUpperCase()}</span><h2>{project.title}</h2><p>{project.description}</p><dl><div><dt>CREATOR</dt><dd>{project.studentName}</dd></div>{project.creatorType === "teacher" ? <div><dt>ROLE</dt><dd>{project.creatorRole}</dd></div> : <div><dt>CLASS</dt><dd>{project.gradeLabel} · {project.classLabel}</dd></div>}<div><dt>BUILT WITH</dt><dd>{project.technologies.join(" · ")}</dd></div></dl></aside> : null}
+      {infoOpen ? <aside className="runner-info"><button aria-label="Close project information" onClick={() => setInfoOpen(false)}><span aria-hidden="true" className="close-icon" /></button><span className="project-tag">{project.categories.join(" · ").toUpperCase()}</span><h2>{project.title}</h2><p>{project.description}</p><dl><div><dt>CREATOR</dt><dd>{project.studentName}</dd></div>{project.creatorType === "teacher" ? <div><dt>SUBJECT</dt><dd>{project.creatorRole}</dd></div> : <div><dt>GRADE</dt><dd>{project.gradeLabel}</dd></div>}<div><dt>BUILT WITH</dt><dd>{project.technologies.join(" · ")}</dd></div></dl></aside> : null}
     </div>
   );
 }

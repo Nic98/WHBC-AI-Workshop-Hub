@@ -2,27 +2,26 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 
 type HomeProject = {
   id?: string; slug?: string; title: string; student: string; grade: string; tag: string; tone: string;
-  preview: "dashboard" | "story" | "orbit"; coverKey?: string | null; coverAlt?: string; featured?: boolean;
+  preview: "dashboard" | "story" | "orbit"; coverKey?: string | null; coverAlt?: string; featured?: boolean; creatorType?: "student" | "teacher";
 };
 
-type PublicProject = {
-  id: string; slug: string; title: string; studentName: string; gradeId: string; classId: string;
-  creatorType: "student" | "teacher"; creatorRole: string | null;
+export type PublicHomeProject = {
+  id: string; slug: string; title: string; studentName: string; gradeId: string; creatorType: "student" | "teacher"; creatorRole: string | null;
   category: string; categories: string[]; coverKey: string | null; coverAlt: string; featured: boolean;
 };
 
-type PublicOptions = { grades: Array<{ id: string; label: string }>; classes: Array<{ id: string; label: string }> };
+export type PublicHomeOptions = { grades: Array<{ id: string; label: string }> };
 
 const holdingCards: HomeProject[] = [
-  { title: "A space for the next idea", student: "Student project coming soon", grade: "IDEA → BUILD → SHARE", tag: "WORKSHOP", tone: "mint", preview: "dashboard" },
-  { title: "Stories made interactive", student: "Student project coming soon", grade: "IDEA → BUILD → SHARE", tag: "CREATIVE AI", tone: "violet", preview: "story" },
-  { title: "Experiments in motion", student: "Student project coming soon", grade: "IDEA → BUILD → SHARE", tag: "SIMULATION", tone: "lime", preview: "orbit" },
+  { title: "A space for the next idea", student: "Project coming soon", grade: "IDEA → BUILD → SHARE", tag: "WORKSHOP", tone: "mint", preview: "dashboard", creatorType: "student" },
+  { title: "Stories made interactive", student: "Project coming soon", grade: "IDEA → BUILD → SHARE", tag: "CREATIVE AI", tone: "violet", preview: "story", creatorType: "student" },
+  { title: "Experiments in motion", student: "Project coming soon", grade: "IDEA → BUILD → SHARE", tag: "SIMULATION", tone: "lime", preview: "orbit", creatorType: "student" },
 ];
 const categoryTones: Record<string, string> = { Simulation: "lime", Art: "violet", Game: "coral", Tool: "blue", Academic: "mint" };
 
@@ -37,52 +36,36 @@ function ProjectCard({ project, className = "" }: { project: HomeProject; classN
   return project.slug ? <Link className="home-project-link" href={`/projects/${project.slug}`}>{content}</Link> : content;
 }
 
-export function HomeContent() {
-  const [displayProjects, setDisplayProjects] = useState<HomeProject[]>(holdingCards);
-  const [featuredProjects, setFeaturedProjects] = useState<HomeProject[]>([]);
+export function HomeContent({ initialProjects, options }: { initialProjects: PublicHomeProject[]; options: PublicHomeOptions }) {
+  const projects = useMemo(() => initialProjects.map((project, index): HomeProject => ({
+    id: project.id, slug: project.slug, title: project.title, student: project.studentName,
+    grade: project.creatorType === "teacher" ? project.creatorRole ?? "Teacher" : options.grades.find((item) => item.id === project.gradeId)?.label ?? project.gradeId,
+    tag: project.categories.join(" · ").toUpperCase(), tone: categoryTones[project.categories[0]] ?? "blue", preview: (["dashboard", "story", "orbit"] as const)[index % 3],
+    coverKey: project.coverKey, coverAlt: project.coverAlt, featured: project.featured, creatorType: project.creatorType,
+  })), [initialProjects, options]);
+  const heroProjects = projects.filter((project) => project.creatorType !== "teacher").slice(0, 3);
+  const studentFeatured = projects.filter((project) => project.creatorType !== "teacher" && project.featured).slice(0, 3);
+  const teacherTools = projects.filter((project) => project.creatorType === "teacher").slice(0, 3);
   const heroGallery = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let active = true;
-    fetch("/api/projects?sort=featured")
-      .then((response): Promise<{ projects?: PublicProject[]; options?: PublicOptions }> => response.ok ? response.json() : Promise.reject(new Error("Project catalog unavailable")))
-      .then((result) => {
-        const options = result.options;
-        const projects = (result.projects ?? []).map((project, index): HomeProject => ({
-          id: project.id, slug: project.slug, title: project.title, student: project.studentName,
-          grade: project.creatorType === "teacher" ? project.creatorRole ?? "Teacher" : `${options?.grades.find((item) => item.id === project.gradeId)?.label ?? project.gradeId} · ${options?.classes.find((item) => item.id === project.classId)?.label ?? project.classId}`,
-          tag: project.categories.join(" · ").toUpperCase(), tone: categoryTones[project.categories[0]] ?? "blue",
-          preview: (["dashboard", "story", "orbit"] as const)[index % 3], coverKey: project.coverKey, coverAlt: project.coverAlt, featured: project.featured,
-        }));
-        if (active && projects.length) {
-          setDisplayProjects(projects.slice(0, 3));
-          setFeaturedProjects(projects.filter((project) => project.featured).slice(0, 3));
-        }
-      })
-      .catch(() => undefined);
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    const element = heroGallery.current;
-    if (!element) return;
-    let visible = true;
+    const element = heroGallery.current; if (!element) return; let visible = true;
     const update = () => element.classList.toggle("ambient-paused", document.hidden || !visible);
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); }, { threshold: 0.05 });
-    observer.observe(element);
-    document.addEventListener("visibilitychange", update);
+    observer.observe(element); document.addEventListener("visibilitychange", update);
     return () => { observer.disconnect(); document.removeEventListener("visibilitychange", update); };
   }, []);
 
+  const hero = heroProjects.length ? heroProjects : holdingCards;
+  const featured = studentFeatured.length ? studentFeatured : projects.filter((project) => project.creatorType !== "teacher").slice(0, 3);
   return <>
-    <main>
-    <SiteHeader active="home" />
-    <section className="hero" id="top"><div className="hero-copy"><span className="eyebrow">STUDENT-BUILT · AI-POWERED</span><h1>Ideas become interactive.</h1><p>这里收集学生亲手做出的 AI 项目。看看灵感如何变成可以玩的作品。</p><Link className="primary-button" href="/projects">逛逛项目 <span aria-hidden="true">↘</span></Link><div className="process" aria-label="Our project process"><span>IDEA</span><i>→</i><span>BUILD</span><i>→</i><span>TEST</span><i>→</i><span>SHARE</span></div></div>
-      <div className="hero-gallery" aria-label="Selected student project previews" ref={heroGallery}><div className="dot-field" aria-hidden="true" /><div className="workshop-shape shape-violet" aria-hidden="true" /><div className="workshop-shape shape-coral" aria-hidden="true" /><ProjectCard project={displayProjects[0]} className="hero-card hero-card-one" /><ProjectCard project={displayProjects[1] ?? holdingCards[1]} className="hero-card hero-card-two" /><ProjectCard project={displayProjects[2] ?? holdingCards[2]} className="hero-card hero-card-three" /><div className="idea-mark" aria-hidden="true"><span /><span /><span /><span /></div></div>
-    </section>
-    <section className="featured-section" id="featured"><div className="section-heading"><div><span className="eyebrow">CURATED FROM THE WORKSHOP</span><h2>Featured Projects</h2></div><Link className="secondary-button" href="/projects">查看全部 <span aria-hidden="true">→</span></Link></div><div className="featured-grid">{(featuredProjects.length ? featuredProjects : holdingCards.slice(0, 2)).map((project) => <ProjectCard key={project.title} project={project} />)}</div></section>
-    <section className="platform-statement" id="about"><span className="eyebrow">ABOUT THE HUB</span><div className="platform-statement-grid"><h2>Made to share.<br />Built to inspire.</h2><div className="platform-statement-copy"><p>Student AI projects, open for everyone to explore.</p><p lang="zh-CN">学生 AI 作品，在这里被看见、被体验。</p></div></div></section>
-    </main>
-    <SiteFooter />
+    <main><SiteHeader active="home" />
+      <section className="hero" id="top"><div className="hero-copy"><span className="eyebrow">STUDENT-BUILT · TEACHER-SHARED</span><h1>Ideas become interactive.</h1><p>这里收集学生的 Vibe Coding 作品，也分享老师用 AI 做出的教学工具。</p><div className="hero-actions"><Link className="primary-button" href="/projects">逛逛项目 <span aria-hidden="true">↘</span></Link><Link className="secondary-button" href="/submit">分享作品</Link></div><div className="process" aria-label="Our project process"><span>IDEA</span><i>→</i><span>BUILD</span><i>→</i><span>TEST</span><i>→</i><span>SHARE</span></div></div>
+        <div className="hero-gallery" aria-label="Selected student project previews" ref={heroGallery}><div className="dot-field" aria-hidden="true" /><div className="workshop-shape shape-violet" aria-hidden="true" /><div className="workshop-shape shape-coral" aria-hidden="true" /><ProjectCard project={hero[0] ?? holdingCards[0]} className="hero-card hero-card-one" /><ProjectCard project={hero[1] ?? holdingCards[1]} className="hero-card hero-card-two" /><ProjectCard project={hero[2] ?? holdingCards[2]} className="hero-card hero-card-three" /><div className="idea-mark" aria-hidden="true"><span /><span /><span /><span /></div></div>
+      </section>
+      <section className="featured-section" id="featured"><div className="section-heading"><div><span className="eyebrow">STUDENT PROJECTS · 学生作品</span><h2>Ideas you can try</h2></div><Link className="secondary-button" href="/projects?creator=student">查看全部 <span aria-hidden="true">→</span></Link></div><div className="featured-grid">{(featured.length ? featured : holdingCards.slice(0, 2)).map((project) => <ProjectCard key={project.slug ?? project.title} project={project} />)}</div></section>
+      <section className="teacher-tools-section"><div className="section-heading"><div><span className="eyebrow">TEACHER TOOLS · 教师工具</span><h2>Built for the classroom</h2></div><Link className="secondary-button" href="/projects?creator=teacher">Explore tools <span aria-hidden="true">→</span></Link></div>{teacherTools.length ? <div className="featured-grid">{teacherTools.map((project) => <ProjectCard key={project.slug} project={project} />)}</div> : <div className="teacher-empty"><div><span className="project-tag">OPEN CALL</span><h3>Teachers can share here too.</h3><p>Submit an AI-powered teaching tool so colleagues across the school can try it.</p></div><Link className="primary-button" href="/submit">Share a teacher tool</Link></div>}</section>
+      <section className="platform-statement" id="about"><span className="eyebrow">ABOUT THE HUB</span><div className="platform-statement-grid"><h2>Made to share.<br />Built to inspire.</h2><div className="platform-statement-copy"><p>Student projects and teacher-made tools, open for everyone to explore.</p><p lang="zh-CN">让作品被看见，让好工具在校园里真正流动起来。</p></div></div></section>
+    </main><SiteFooter />
   </>;
 }

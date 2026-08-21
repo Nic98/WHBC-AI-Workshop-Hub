@@ -12,7 +12,7 @@ export function SiteHeader({ active }: { active?: PublicPage }) {
         <Link aria-current={active === "about" ? "page" : undefined} className={active === "about" ? "nav-active" : undefined} href="/about">About</Link>
         <Link aria-current={active === "privacy" ? "page" : undefined} className={active === "privacy" ? "nav-active" : undefined} href="/privacy">Privacy</Link>
       </nav>
-      <Link aria-label="Administrator sign in" className="admin-link" href="/admin" title="Admin">🔐</Link>
+      <div className="header-actions"><Link className="header-submit" href="/submit">Share a project</Link><Link aria-label="Administrator sign in" className="admin-link" href="/admin" title="Admin">🔐</Link></div>
     </header>
   );
 }

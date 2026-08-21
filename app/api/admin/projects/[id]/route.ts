@@ -18,7 +18,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const validation = validateProjectPayload(await request.json().catch(() => null));
   if (!validation.data) return Response.json({ error: validation.error }, { status: 400 });
   const data = validation.data;
-  if (data.creatorType === "student" && !(await catalogSelectionExists(data.gradeId, data.classId))) return Response.json({ error: "Choose an available grade and class." }, { status: 400 });
+  if (data.creatorType === "student" && !(await catalogSelectionExists(data.gradeId))) return Response.json({ error: "Choose an available grade." }, { status: 400 });
   const external = data.sourceType === "url" ? await inspectExternalProjectUrl(data.externalUrl!) : null;
   const [updated] = await getDb().update(projects).set({
     title: data.title,
@@ -27,7 +27,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     creatorType: data.creatorType,
     creatorRole: data.creatorRole,
     gradeId: data.gradeId,
-    classId: data.classId,
+    classId: "",
     category: data.categories[0],
     categoriesJson: JSON.stringify(data.categories),
     technologiesJson: JSON.stringify(data.technologies),

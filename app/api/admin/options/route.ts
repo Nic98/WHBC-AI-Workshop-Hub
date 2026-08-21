@@ -1,13 +1,13 @@
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { classOptions, gradeOptions, projects } from "@/db/schema";
+import { gradeOptions, projects } from "@/db/schema";
 import { assertSameOrigin, isAdminRequest } from "@/lib/auth";
 import { slugify } from "@/lib/catalog";
 
-type OptionType = "grade" | "class";
+type OptionType = "grade";
 
 function readType(value: unknown): OptionType | null {
-  return value === "grade" || value === "class" ? value : null;
+  return value === "grade" ? value : null;
 }
 
 function readLabel(value: unknown) {
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
   const payload = (await request.json().catch(() => null)) as { type?: unknown; label?: unknown } | null;
   const type = readType(payload?.type);
   const label = readLabel(payload?.label);
-  if (!type || !label) return Response.json({ error: "Choose grade or class and enter a label of 40 characters or fewer." }, { status: 400 });
-  const table = type === "grade" ? gradeOptions : classOptions;
+  if (!type || !label) return Response.json({ error: "Enter a grade label of 40 characters or fewer." }, { status: 400 });
+  const table = gradeOptions;
   const [duplicate] = await getDb().select({ id: table.id }).from(table).where(eq(table.label, label)).limit(1);
   if (duplicate) return Response.json({ error: "That option already exists." }, { status: 409 });
   const [last] = await getDb().select({ sortOrder: table.sortOrder }).from(table).orderBy(desc(table.sortOrder)).limit(1);
@@ -42,7 +42,7 @@ export async function PATCH(request: Request) {
   const type = readType(payload?.type);
   const id = typeof payload?.id === "string" ? payload.id : "";
   if (!type || !id) return Response.json({ error: "The option is missing." }, { status: 400 });
-  const table = type === "grade" ? gradeOptions : classOptions;
+  const table = gradeOptions;
   const [existing] = await getDb().select().from(table).where(eq(table.id, id)).limit(1);
   if (!existing) return Response.json({ error: "Option not found." }, { status: 404 });
   const label = payload?.label === undefined ? existing.label : readLabel(payload.label);
@@ -63,9 +63,8 @@ export async function DELETE(request: Request) {
   const type = readType(payload?.type);
   const id = typeof payload?.id === "string" ? payload.id : "";
   if (!type || !id) return Response.json({ error: "The option is missing." }, { status: 400 });
-  const table = type === "grade" ? gradeOptions : classOptions;
-  const projectField = type === "grade" ? projects.gradeId : projects.classId;
-  const [inUse] = await getDb().select({ id: projects.id }).from(projects).where(eq(projectField, id)).limit(1);
+  const table = gradeOptions;
+  const [inUse] = await getDb().select({ id: projects.id }).from(projects).where(eq(projects.gradeId, id)).limit(1);
   if (inUse) return Response.json({ error: "This option is used by a project. Deactivate it instead." }, { status: 409 });
   await getDb().delete(table).where(eq(table.id, id));
   return Response.json({ ok: true });

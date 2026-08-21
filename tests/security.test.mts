@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { frameBlockedByHeaders, isPrivateHostname, validateExternalProjectUrl } from "../lib/external.ts";
-import { normalizeProjectPath, validateManifest } from "../lib/storage-validation.ts";
+import { detectCoverType, normalizeProjectPath, unsafeProjectContentReason, validateCoverBytes, validateManifest } from "../lib/storage-validation.ts";
 import { verifyPbkdf2Password } from "../lib/password.ts";
 import { prepareProjectBytes } from "../lib/project-upload.ts";
 import { readFile } from "node:fs/promises";
@@ -10,6 +10,7 @@ import { createProjectPreviewToken, verifyProjectPreviewToken } from "../lib/pre
 import { isEmbeddedProjectPath } from "../lib/embedded-route.ts";
 import { isLocalPreviewHostname, localPreviewOrigin } from "../lib/local-preview-origin.ts";
 import { siteContentSecurityPolicy } from "../lib/security-headers.ts";
+import { validateSubmissionPayload } from "../lib/submission-validation.ts";
 
 test("external project URLs accept only public HTTPS destinations", () => {
   assert.equal(validateExternalProjectUrl("https://example.com/demo#section"), "https://example.com/demo");
@@ -37,6 +38,42 @@ test("uploaded project manifests reject traversal, executables, duplicates, and 
   assert.match(validateManifest([{ path: "index.html", size: 51 * 1024 * 1024 }]).error ?? "", /too large/);
   const valid = validateManifest([{ path: "index.html", size: 12, type: "text/html" }, { path: "assets/app.js", size: 8 }]);
   assert.equal("files" in valid && valid.files?.length, 2);
+});
+
+test("submission quarantine rejects private files and embedded credentials", () => {
+  for (const path of [".env", ".env.production", ".git/config", "node_modules/pkg/index.js", "keys/private.pem", "id_rsa"]) {
+    assert.equal(normalizeProjectPath(path), null, path);
+  }
+  const encoder = new TextEncoder();
+  assert.match(unsafeProjectContentReason("app.js", encoder.encode("const key = 'sk-proj-abcdefghijklmnopqrstuvwxyz123456';")) ?? "", /credential/);
+  assert.equal(unsafeProjectContentReason("app.js", encoder.encode("console.log('safe project')")), null);
+});
+
+test("cover validation trusts file signatures instead of claimed MIME types", () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  assert.equal(detectCoverType(png), "image/png");
+  assert.deepEqual(validateCoverBytes(png), { type: "image/png", extension: "png" });
+  assert.match(validateCoverBytes(new TextEncoder().encode("<script>alert(1)</script>")).error ?? "", /valid PNG/);
+});
+
+test("submission payloads enforce creator privacy fields and supported sources", () => {
+  const base = {
+    creatorType: "student", creatorDisplayName: "Alex Chen", contactEmail: "ALEX@example.com", gradeId: "grade-10",
+    title: "Climate Lens", description: "An interactive climate data explorer.", categories: ["Academic", "Tool"],
+    technologies: ["HTML", "JavaScript"], sourceType: "html", externalUrl: null, coverAlt: "Climate charts on a blue dashboard",
+    testInstructions: "Open every chart.", revisionReference: "AWH-20260819-ABCD23", originalFilename: "project.html",
+    manifest: [{ path: "index.html", size: 128, type: "text/html" }], rightsConfirmed: true,
+  };
+  const valid = validateSubmissionPayload(base);
+  assert.equal(valid.data?.contactEmail, "alex@example.com");
+  assert.equal(valid.data?.creatorRole, null);
+  assert.match(validateSubmissionPayload({ ...base, contactEmail: "invalid" }).error ?? "", /valid contact email/);
+  assert.match(validateSubmissionPayload({ ...base, categories: ["Unknown"] }).error ?? "", /approved project category/);
+  assert.match(validateSubmissionPayload({ ...base, revisionReference: "AWH-WRONG" }).error ?? "", /previous submission number/);
+
+  const teacher = validateSubmissionPayload({ ...base, creatorType: "teacher", gradeId: "ignored", creatorRole: "Science", sourceType: "url", externalUrl: "https://example.com/tool", originalFilename: null, manifest: [] });
+  assert.equal(teacher.data?.gradeId, "");
+  assert.equal(teacher.data?.creatorRole, "Science");
 });
 
 test("administrator password verification enforces the approved PBKDF2 format", async () => {
@@ -97,6 +134,7 @@ test("draft preview tokens are version-scoped, tamper-resistant, and short-lived
 test("global frame blocking excludes only public and authorized project embed routes", () => {
   assert.equal(isEmbeddedProjectPath("/embed/project/version/index.html"), true);
   assert.equal(isEmbeddedProjectPath("/embed-preview/project/version/token/assets/app.js"), true);
+  assert.equal(isEmbeddedProjectPath("/embed-submission/submission/token/assets/app.js"), true);
   assert.equal(isEmbeddedProjectPath("/admin/preview/project"), false);
   assert.equal(isEmbeddedProjectPath("/embed-preview-malicious/project"), false);
   assert.equal(isEmbeddedProjectPath("/projects/example/run"), false);

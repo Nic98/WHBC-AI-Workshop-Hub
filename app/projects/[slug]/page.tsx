@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPublishedProjectBySlug } from "@/lib/catalog";
 import { ProjectsGallery } from "../projects-gallery";
 import { ProjectDialog } from "./project-dialog";
+import { ViewTracker } from "./view-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       <ProjectsGallery backdrop />
       <div className="paper-veil" />
       <ProjectDialog project={project} />
+      <ViewTracker projectId={project.id} />
     </>
   );
 }

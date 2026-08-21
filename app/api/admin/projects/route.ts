@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { projects, projectVersions } from "@/db/schema";
+import { projectDailyMetrics, projects, projectVersions } from "@/db/schema";
 import { assertSameOrigin, isAdminRequest } from "@/lib/auth";
 import { catalogSelectionExists, getAdminCatalogOptions, serializeProject, uniqueSlug, validateProjectPayload } from "@/lib/catalog";
 import { fetchExternalImage, inspectExternalProjectUrl } from "@/lib/external";
@@ -8,17 +8,21 @@ import { coverObjectKey, getProjectBucket } from "@/lib/storage";
 
 export async function GET(request: Request) {
   if (!(await isAdminRequest(request))) return Response.json({ error: "Sign in to continue." }, { status: 401 });
-  const [rows, options, versions] = await Promise.all([
+  const [rows, options, versions, metricRows] = await Promise.all([
     getDb().select().from(projects).orderBy(desc(projects.updatedAt)),
     getAdminCatalogOptions(),
     getDb().select({ id: projectVersions.id, state: projectVersions.state }).from(projectVersions),
+    getDb().select({ projectId: projectDailyMetrics.projectId, views: projectDailyMetrics.views }).from(projectDailyMetrics),
   ]);
   const versionStates = new Map(versions.map((version) => [version.id, version.state]));
+  const viewTotals = new Map<string, number>();
+  for (const metric of metricRows) viewTotals.set(metric.projectId, (viewTotals.get(metric.projectId) ?? 0) + metric.views);
   return Response.json({
     projects: rows.map((row) => ({
       ...serializeProject(row),
       draftReady: Boolean(row.draftVersionId && versionStates.get(row.draftVersionId) === "ready"),
       currentReady: Boolean(row.currentVersionId && versionStates.get(row.currentVersionId) === "ready"),
+      views: viewTotals.get(row.id) ?? 0,
     })),
     options,
   }, { headers: { "cache-control": "no-store" } });
@@ -30,7 +34,7 @@ export async function POST(request: Request) {
   const validation = validateProjectPayload(await request.json().catch(() => null));
   if (!validation.data) return Response.json({ error: validation.error }, { status: 400 });
   const data = validation.data;
-  if (data.creatorType === "student" && !(await catalogSelectionExists(data.gradeId, data.classId))) return Response.json({ error: "Choose an available grade and class." }, { status: 400 });
+  if (data.creatorType === "student" && !(await catalogSelectionExists(data.gradeId))) return Response.json({ error: "Choose an available grade." }, { status: 400 });
   const external = data.sourceType === "url" ? await inspectExternalProjectUrl(data.externalUrl!) : null;
   const id = crypto.randomUUID();
   const [project] = await getDb().insert(projects).values({
@@ -43,7 +47,7 @@ export async function POST(request: Request) {
     creatorType: data.creatorType,
     creatorRole: data.creatorRole,
     gradeId: data.gradeId,
-    classId: data.classId,
+    classId: "",
     category: data.categories[0],
     categoriesJson: JSON.stringify(data.categories),
     technologiesJson: JSON.stringify(data.technologies),
